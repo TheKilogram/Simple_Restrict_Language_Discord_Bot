@@ -2,11 +2,13 @@ import discord
 import os
 import csv
 import re
+from dotenv import load_dotenv
 from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.message_content = True
 # Read the Discord bot token from an environment variable
+load_dotenv()  # Ensure you have python-dotenv installed and .env file set up
 TOKEN_ENV_VAR = "DISCORD_BOT_TOKEN"
 discord_token = os.getenv(TOKEN_ENV_VAR)
 if not discord_token:
@@ -38,9 +40,15 @@ def load_restricted_user_ids(path: str):
     return ids
 
 # CSV path configurable via env var; defaults to file in same directory.
-RESTRICTED_IDS_CSV = os.getenv("RESTRICTED_USER_IDS_CSV", "restricted_user_ids.csv")
+RESTRICTED_IDS_CSV = os.getenv("RESTRICTED_USER_IDS_CSV", "UserIDs-List.csv")
 RESTRICTED_USER_IDS = load_restricted_user_ids(RESTRICTED_IDS_CSV)
 print(f"Loaded {len(RESTRICTED_USER_IDS)} restricted user ID(s) from {RESTRICTED_IDS_CSV}")
+if RESTRICTED_USER_IDS:
+    print("Restricted identifiers (exact match against ID, username, or global_name):")
+    for ident in sorted(RESTRICTED_USER_IDS):
+        print(f"  - {ident}")
+else:
+    print("(No restricted identifiers loaded)")
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
