@@ -82,19 +82,42 @@ def is_allowed_text(text: str) -> bool:
     """
     Allow: ASCII letters/digits/punctuation, whitespace, emojis, and URLs.
     Reject: Other script characters (e.g., CJK, Cyrillic, etc.) outside emoji/URL parts.
+    Special case: Disallow the flag emoji while some flags.
     """
     # Remove safe constructs we always allow before scanning
     scrubbed = URL_REGEX.sub('', text)
     scrubbed = CUSTOM_EMOJI_REGEX.sub('', scrubbed)
     scrubbed = MENTION_REGEX.sub('', scrubbed)
-    for ch in scrubbed:
+    # Regional indicator range for flags
+    REGIONAL_MIN = 0x1F1E6
+    REGIONAL_MAX = 0x1F1FF
+    # Banned flag pair (China): 🇨 (U+1F1E8) + 🇳 (U+1F1F3)
+    BANNED_FLAG_PAIR = (0x1F1E8, 0x1F1F3)
+
+    i = 0
+    length = len(scrubbed)
+    while i < length:
+        ch = scrubbed[i]
         if ch in ALLOWED_ASCII or ch.isspace():
+            i += 1
             continue
         cp = ord(ch)
+        # Check for potential flag (pair of regional indicators)
+        if REGIONAL_MIN <= cp <= REGIONAL_MAX and i + 1 < length:
+            cp2 = ord(scrubbed[i + 1])
+            if REGIONAL_MIN <= cp2 <= REGIONAL_MAX:
+                # Detected a flag sequence
+                if (cp, cp2) == BANNED_FLAG_PAIR:
+                    return False  # China flag rejected
+                # Skip the second codepoint of the flag
+                i += 2
+                continue
         if is_emoji(cp):
+            i += 1
             continue
         # Anything else (foreign script) => reject
         return False
+    # Passed all checks
     return True
 
 @bot.event
